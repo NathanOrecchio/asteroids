@@ -58,10 +58,6 @@ class Player implements StartingParameters {
         this.yloc += this.yvel;
     }
 
-    public shoot(): void {
-
-    }
-
 }
 
 class Projectile implements StartingParameters {
@@ -89,6 +85,40 @@ class Projectile implements StartingParameters {
         this.ctx.arc(this.xloc, this.yloc, this.radius, 0, Math.PI * 2);
         this.ctx.closePath();
         this.ctx.fill();
+        this.ctx.closePath();
+    }
+
+    update() {
+        this.draw();
+        this.xloc += this.xvel;
+        this.yloc += this.yvel;
+    }
+}
+
+class Asteroid implements StartingParameters {
+    xloc: number;
+    yloc: number;
+    color: string;
+    xvel: number;
+    yvel: number;
+    ctx: CanvasRenderingContext2D;
+    radius: number;
+    constructor({ xloc, yloc }: { xloc: number, yloc: number }, color: string, ctx: CanvasRenderingContext2D, { xvel, yvel }: { xvel: number, yvel: number }, radius: number) {
+        this.xloc = xloc;
+        this.yloc = yloc;
+        this.color = color;
+        this.ctx = ctx;
+        this.xvel = xvel;
+        this.yvel = yvel;
+        this.radius = radius;
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.xloc, this.yloc, this.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = this.color;
+        ctx.stroke();
+        ctx.closePath();
     }
 
     update() {
@@ -123,6 +153,53 @@ const PROJECTILE_SPEED: number = 3;
 const FRICTION: number = 0.97;
 
 const projectiles: Projectile[] = [];
+const asteroids: Asteroid[] = [];
+
+window.setInterval(() => {
+    const index: number = Math.floor(Math.random() * 4);
+    let x!: number, y!: number;
+    let velx!: number, vely!: number;
+    let radius: number = 50 * Math.random() + 10;
+
+    try {
+        switch (index) { // Where to spawn Asteroids
+            case 0: // left of screen
+                x = 0 - radius;
+                y = Math.random() * canvas.height;
+                velx = 1;
+                vely = 0;
+                break
+            case 1: // bottom of screen
+                x = Math.random() * canvas.width;
+                y = canvas.height + radius;
+                velx = 0;
+                vely = -1;
+                break
+            case 2: // right of screen
+                x = canvas.width + radius;
+                y = Math.random() * canvas.height;
+                velx = -1;
+                vely = 0;
+                break
+            case 3: // top of screen
+                x = Math.random() * canvas.width;
+                y = 0 - radius;
+                velx = 0;
+                vely = 1;
+                break
+        }
+    } catch (error) {
+        console.log(error);
+    } finally {
+        asteroids.push(new Asteroid(
+            { xloc: x, yloc: y },
+            "white",
+            ctx,
+            { xvel: velx, yvel: vely },
+            radius,
+        ))
+    }
+}, 3000)
 
 function animate(): void {
     window.requestAnimationFrame(animate);
@@ -143,6 +220,20 @@ function animate(): void {
             projectile.yloc + projectile.radius < 0) {
             projectiles.splice(i, 1);
         }
+    }
+
+    for (let i: number = asteroids.length - 1; i >= 0; i--) {
+        const asteroid: Asteroid = asteroids[i];
+        asteroid.update();
+
+        // Asteroid garbage collection.
+        if (asteroid.xloc + asteroid.radius < 0 ||
+            asteroid.xloc - asteroid.radius > canvas.width ||
+            asteroid.yloc - asteroid.radius > canvas.height ||
+            asteroid.yloc + asteroid.radius < 0) {
+            asteroids.splice(i, 1);
+        }
+
     }
 
     if (keys.w.pressed) {
@@ -195,6 +286,4 @@ window.addEventListener("keyup", (e) => {
     }
 });
 
-window.addEventListener("click", () => {
-    player.shoot();
-})
+
